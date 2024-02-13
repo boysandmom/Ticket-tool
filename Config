@@ -1,0 +1,58 @@
+import discord
+from discord.ext import commands
+
+# Your Discord bot token
+TOKEN = 'YOUR_DISCORD_BOT_TOKEN'
+
+# Prefix for bot commands
+PREFIX = '!'
+
+# Instantiate a bot object
+bot = commands.Bot(command_prefix=PREFIX)
+
+# Dictionary to store ticket channels
+ticket_channels = {}
+
+# Command to open a new ticket
+@bot.command()
+async def open_ticket(ctx):
+    # Check if the channel already has a ticket
+    if ctx.channel.id in ticket_channels.values():
+        await ctx.send("A ticket is already open in this channel.")
+        return
+
+    # Create a new channel for the ticket
+    ticket_channel = await ctx.guild.create_text_channel(name=f'ticket-{ctx.author.name}', category=ctx.channel.category)
+
+    # Add the ticket channel to the dictionary
+    ticket_channels[ctx.author.id] = ticket_channel.id
+
+    # Send a message to the ticket channel
+    await ticket_channel.send(f"Ticket opened by {ctx.author.mention}")
+
+# Command to close a ticket
+@bot.command()
+async def close_ticket(ctx):
+    # Check if the channel is a ticket channel
+    if ctx.channel.id not in ticket_channels.values():
+        await ctx.send("This is not a ticket channel.")
+        return
+
+    # Check if the user who initiated the close command is the ticket owner
+    if ticket_channels.get(ctx.author.id) != ctx.channel.id:
+        await ctx.send("You are not authorized to close this ticket.")
+        return
+
+    # Delete the ticket channel
+    await ctx.channel.delete()
+
+    # Remove the ticket channel from the dictionary
+    del ticket_channels[ctx.author.id]
+
+# Bot event: when the bot is ready
+@bot.event
+async def on_ready():
+    print(f'{bot.user.name} has connected to Discord!')
+
+# Run the bot
+bot.run(TOKEN)
